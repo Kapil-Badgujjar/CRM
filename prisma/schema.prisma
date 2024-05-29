@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model SalesTeam {
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String          @unique
+  password         String
+  role             String
+  managerId        String?         @db.ObjectId
+  manager          SalesTeam?      @relation("ManagerSubordinates", fields: [managerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subordinates     SalesTeam[]     @relation("ManagerSubordinates")
+  assignedLeads    Leads[]
+  soldLeads        ConvertedLead[]
+  assignedPrograms Programs[]
+  FollowUps        FollowUps[]
+}
+
+model Leads {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  time         DateTime
+  adsetName    String
+  fullName     String
+  grade        String
+  email        String
+  phoneNumber  String
+  sourceOfLead String
+  programName  Programs    @relation(fields: [programsId], references: [id])
+  assignedTo   SalesTeam?  @relation(fields: [assignedToId], references: [id])
+  assignedToId String?     @db.ObjectId
+  nextFollowUp String
+  status       String
+  followUps    FollowUps[] @relation("LeadFollowUps")
+  programsId   String      @db.ObjectId
+}
+
+model FollowUps {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  leadId       String    @db.ObjectId
+  responseType String
+  comment      String
+  calledBy     SalesTeam @relation(fields: [salesTeamId], references: [id])
+  followUpType String
+  lead         Leads     @relation("LeadFollowUps", fields: [leadId], references: [id])
+  salesTeamId  String    @db.ObjectId
+
+  @@index([leadId], name: "leadId_idx")
+}
+
+model ConvertedLead {
+  id            String    @id @map("_id") @db.ObjectId
+  programName   Programs  @relation(fields: [programsId], references: [id])
+  price         Int
+  convertedBy   SalesTeam @relation(fields: [convertedById], references: [id])
+  convertedById String    @db.ObjectId
+  programsId    String    @db.ObjectId
+}
+
+model Programs {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  programName   String
+  assignedTo    SalesTeam?      @relation(fields: [assignedToId], references: [id])
+  assignedToId  String?         @db.ObjectId
+  Leads         Leads[]
+  ConvertedLead ConvertedLead[]
+}
